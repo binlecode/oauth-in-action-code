@@ -34,8 +34,19 @@ var client = {
 
 var protectedResource = 'http://localhost:9002/resource';
 
+/*
+ * To prevent man-in-middle attach that any one could invoke '/callback' other than the intended
+ * redirect, using an optional OAuth parameter called state, which is assigned a random string 
+ * for every redirect request.
+ * It is important to keep the 'state' variable at application scope so that it is available
+ * everytime when the call to the 'redirect_url' comes back.
+ */
 var state = null;
 
+/*
+ * The kind of OAuth access token defined here is known as a bearer token, which
+ * means that whoever holds the token can present it to the protected resource.
+ */
 var access_token = null;
 var scope = null;
 
@@ -50,6 +61,9 @@ app.get('/authorize', function(req, res) {
 	 */
 
 	access_token = null;
+
+
+	// @see state checking logic in '/callback' handler function
 	state = randomstring.generate();
 	
 	var authorizeUrl = buildUrl(authServer.authorizationEndpoint, {
@@ -79,6 +93,8 @@ app.get('/callback', function(req, res){
 		return;
 	}
 
+	// If the state value doesn’t match what we’re expecting, that’s a very good indication
+    // that something untoward is happening, such as a session fixation attack.
 	if (req.query.state != state) {
 		console.log('State does not match: expected %s, got %s', state, req.query.state);
 		res.render('error', {error: 'State value did not match'});
@@ -119,11 +135,34 @@ app.get('/callback', function(req, res){
 });
 
 app.get('/fetch_resource', function(req, res) {
-
+	
 	/*
 	 * Use the access token to call the resource server
 	 */
 	
+	if (!access_token) {
+		res.render('error', {error: 'Missing access token'});
+		return;
+	}
+
+	console.log('Making request with access token %s', access_token);
+
+	var headers = {
+		'Authorization': 'Bearer ' + access_token
+	};
+
+	var resource = request('POST', protectedResource, {
+		headers: headers
+	});
+
+	if (resource.statusCode >=200 && resource.statusCode < 300) {
+		var body = JSON.parse(resource.getBody());
+		res.render('data', {resource: body});
+		return;
+	} else {
+		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
+		return;
+	}
 });
 
 var buildUrl = function(base, options, hash) {
