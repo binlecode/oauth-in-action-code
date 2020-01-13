@@ -1,6 +1,12 @@
 # OAuth 2 in Action
 
+## Note of exercise
+
+To code and run the exercises properly, make sure the node.js version is ~4.4.1 as indicated in book's web appendix: https://livebook.manning.com/book/oauth-2-in-action/appendix-a/6
+
 ![Cover of OAuth 2 in Action](https://images.manning.com/255/340/resize/book/e/14336f9-6493-46dc-938c-11a34c9d20ac/Richer-OAuth2-HI.png)
+
+
 
 https://www.manning.com/books/oauth-2-in-action
 
